@@ -68,6 +68,42 @@
       new IntersectionObserver(function (e) { if (e[0].isIntersecting) { var pr = vd.play(); if (pr && pr.catch) pr.catch(function () {}); } else vd.pause(); }, { threshold: 0.2 }).observe(vd);
     }
   });
+  // ---------- Vidéo motion : 16:9 sur ordinateur, 9:16 sur téléphone, lecture automatique sans son ----------
+  var rv0 = $('#reel-v');
+  if (rv0) {
+    var rframe = $('#reel-frame'), rctl = $('#reel-ctl'), rplay = $('#reel-play'), rsnd = $('#reel-snd');
+    var phone = matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
+    var applySrc = function (v) {
+      rv0.poster = v ? rv0.dataset.posterV : rv0.dataset.posterH;
+      rv0.src = v ? rv0.dataset.srcV : rv0.dataset.srcH;
+      rframe.classList.toggle('is-v', v);
+    };
+    applySrc(phone);
+    rctl.hidden = false;
+    var lab = function () {
+      var playing = !rv0.paused;
+      rplay.textContent = playing ? 'Pause' : 'Lecture';
+      rplay.setAttribute('aria-label', playing ? 'Mettre la vidéo en pause' : 'Lancer la vidéo');
+      rsnd.setAttribute('aria-pressed', String(!rv0.muted));
+      rsnd.setAttribute('aria-label', rv0.muted ? 'Activer le son' : 'Couper le son');
+      rsnd.textContent = rv0.muted ? 'Son' : 'Son activé';
+    };
+    var userPaused = false;
+    var tryPlay = function () { var pr = rv0.play(); if (pr && pr.catch) pr.catch(function () { lab(); }); };
+    if (!reduce && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (e) {
+        if (e[0].isIntersecting) { if (!userPaused) tryPlay(); } else rv0.pause();
+      }, { threshold: 0.4 }).observe(rv0);
+    }
+    rplay.addEventListener('click', function () { if (rv0.paused) { userPaused = false; tryPlay(); } else { userPaused = true; rv0.pause(); } lab(); });
+    rsnd.addEventListener('click', function () { rv0.muted = !rv0.muted; if (!rv0.muted && rv0.paused) { userPaused = false; tryPlay(); } lab(); });
+    rv0.addEventListener('play', lab); rv0.addEventListener('pause', lab);
+    // changement d'orientation ou de taille : on garde le bon format sans recharger la page
+    var mq = matchMedia('(max-width: 760px) and (orientation: portrait)');
+    var onMq = function () { if (mq.matches !== rframe.classList.contains('is-v')) { var t = rv0.currentTime, was = !rv0.paused; applySrc(mq.matches); rv0.addEventListener('loadedmetadata', function f() { rv0.removeEventListener('loadedmetadata', f); try { rv0.currentTime = Math.min(t, (rv0.duration || t) - 0.1); } catch (e) {} if (was) tryPlay(); }); } };
+    if (mq.addEventListener) mq.addEventListener('change', onMq);
+    lab();
+  }
   // ---------- Carte Google : chargée après un clic seulement ----------
   var mapBtn = $('#map-load');
   if (mapBtn) mapBtn.addEventListener('click', function () {

@@ -113,8 +113,13 @@
 <p>Un tour rapide : l'entrée, les rayons, les horaires et comment nous joindre.</p>
 <a class="btn red" href="tel:+33456307007">Appelez-nous</a>
 </div>
-<figure class="reel-frame">
-<video controls playsinline preload="none" poster="media/reel-poster.jpg" width="720" height="1280"><source src="media/reel.mp4" type="video/mp4">Votre navigateur ne lit pas cette vidéo.</video>
+<figure class="reel-frame" id="reel-frame">
+<video id="reel-v" muted loop playsinline preload="metadata" poster="media/reel-h-poster.jpg" data-src-h="media/reel-h.mp4" data-src-v="media/reel.mp4" data-poster-h="media/reel-h-poster.jpg" data-poster-v="media/reel-poster.jpg" aria-label="Visite en vidéo de l'épicerie Panier Sympa : l'entrée, les rayons, les horaires et le téléphone"></video>
+<div class="reel-ctl" id="reel-ctl" hidden>
+<button type="button" class="rc" id="reel-play" aria-label="Mettre la vidéo en pause">Pause</button>
+<button type="button" class="rc" id="reel-snd" aria-pressed="false" aria-label="Activer le son">Son</button>
+</div>
+<noscript><a class="btn red" href="media/reel-h.mp4">Voir la vidéo</a></noscript>
 </figure>
 </div>
 </section>
