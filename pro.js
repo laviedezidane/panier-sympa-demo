@@ -63,9 +63,14 @@
 
   // ---------- Vidéos en boucle décoratives : pause hors écran et si le mouvement est réduit ----------
   $$('.loopvid').forEach(function (vd) {
-    if (reduce) { vd.removeAttribute('autoplay'); vd.pause(); return; }
+    // bouton pause (WCAG 2.2.2 : un mouvement automatique de plus de 5 s doit pouvoir être arrêté)
+    var lb = document.createElement('button'); lb.type = 'button'; lb.className = 'rc lv-ctl'; lb.textContent = 'Pause'; lb.setAttribute('aria-label', 'Mettre la vidéo en pause');
+    var lpaused = false;
+    lb.addEventListener('click', function () { lpaused = !lpaused; if (lpaused) vd.pause(); else { var p = vd.play(); if (p && p.catch) p.catch(function () {}); } lb.textContent = lpaused ? 'Lecture' : 'Pause'; lb.setAttribute('aria-label', lpaused ? 'Relancer la vidéo' : 'Mettre la vidéo en pause'); });
+    if (vd.parentNode) vd.parentNode.appendChild(lb);
+    if (reduce) { vd.removeAttribute('autoplay'); vd.pause(); lpaused = true; lb.textContent = 'Lecture'; lb.setAttribute('aria-label', 'Lancer la vidéo'); return; }
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (e) { if (e[0].isIntersecting) { var pr = vd.play(); if (pr && pr.catch) pr.catch(function () {}); } else vd.pause(); }, { threshold: 0.2 }).observe(vd);
+      new IntersectionObserver(function (e) { if (e[0].isIntersecting) { if (!lpaused) { var pr = vd.play(); if (pr && pr.catch) pr.catch(function () {}); } } else vd.pause(); }, { threshold: 0.2 }).observe(vd);
     }
   });
   // ---------- Vidéo motion : 16:9 sur ordinateur, 9:16 sur téléphone, lecture automatique sans son ----------
@@ -86,7 +91,7 @@
       rplay.setAttribute('aria-label', playing ? 'Mettre la vidéo en pause' : 'Lancer la vidéo');
       rsnd.setAttribute('aria-pressed', String(!rv0.muted));
       rsnd.setAttribute('aria-label', rv0.muted ? 'Activer le son' : 'Couper le son');
-      rsnd.textContent = rv0.muted ? 'Son' : 'Son activé';
+      rsnd.textContent = rv0.muted ? 'Activer le son' : 'Couper le son';
     };
     var userPaused = false;
     var tryPlay = function () { var pr = rv0.play(); if (pr && pr.catch) pr.catch(function () { lab(); }); };

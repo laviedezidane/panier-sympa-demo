@@ -289,3 +289,6 @@ a{text-underline-offset:.2em;text-decoration-thickness:1px}
 .map-note,.legal-row,.foot .sub,.last-film figcaption{font-size:14px}
 .legal-row ul{gap:0 18px}.logo{min-width:44px}
 .last .mega{min-height:44px}
+.last-film{position:relative}
+.lv-ctl{position:absolute;right:14px;bottom:58px}
+@media (max-width:760px){.lv-ctl{bottom:62px}}
