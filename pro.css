@@ -281,3 +281,11 @@ body:has(.legal){background:var(--ivory)}
 ::selection{background:var(--mint);color:var(--night)}
 html{scrollbar-color:var(--brand) var(--paper);accent-color:var(--brand);caret-color:var(--brand)}
 a{text-underline-offset:.2em;text-decoration-thickness:1px}
+
+/* Zones tactiles de 44 px minimum et petits textes lisibles (audit mobile) */
+.logo,.find .tel,.insta a,.foot .f-tel,.foot .f-link,.legal-row a{display:inline-flex;align-items:center;min-height:44px}
+.vctl{min-height:44px;min-width:44px;font-size:14px}
+.map-note a{display:inline-block;padding:13px 6px;margin:-13px 0}
+.map-note,.legal-row,.foot .sub,.last-film figcaption{font-size:14px}
+.legal-row ul{gap:0 18px}.logo{min-width:44px}
+.last .mega{min-height:44px}
