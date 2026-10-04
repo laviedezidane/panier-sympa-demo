@@ -110,16 +110,17 @@
       rsnd.setAttribute('aria-label', rv0.muted ? 'Activer le son' : 'Couper le son');
       rsnd.textContent = rv0.muted ? 'Activer le son' : 'Couper le son';
     };
-    var userPaused = false;
+    var userPaused = false, motionPref = matchMedia('(prefers-reduced-motion: reduce)');
     var tryPlay = function () {
       var pr = rv0.play();
       if (pr && pr.catch) pr.catch(function () { rv0.controls = true; lab(); });
     };
-    if (!reduce && 'IntersectionObserver' in window) {
+    if (!motionPref.matches && 'IntersectionObserver' in window) {
       new IntersectionObserver(function (e) {
-        if (e[0].isIntersecting) { if (!userPaused) tryPlay(); } else rv0.pause();
+        if (e[0].isIntersecting) { if (!userPaused && !motionPref.matches) tryPlay(); } else rv0.pause();
       }, { threshold: 0.4 }).observe(rv0);
-    } else if (!reduce) { tryPlay(); }
+    } else if (!motionPref.matches) { tryPlay(); }
+    if (motionPref.addEventListener) motionPref.addEventListener('change', function () { if (motionPref.matches) rv0.pause(); else if (!userPaused) tryPlay(); });
     rplay.addEventListener('click', function () { if (rv0.paused) { userPaused = false; tryPlay(); } else { userPaused = true; rv0.pause(); } lab(); });
     rsnd.addEventListener('click', function () { rv0.muted = !rv0.muted; if (!rv0.muted && rv0.paused) { userPaused = false; tryPlay(); } lab(); });
     rv0.addEventListener('play', lab); rv0.addEventListener('pause', lab);
@@ -133,7 +134,7 @@
           rv0.removeEventListener('loadedmetadata', f);
           if (version !== sourceVersion) return;
           try { rv0.currentTime = Math.max(0, Math.min(t, (rv0.duration || t) - 0.1)); } catch (e) {}
-          if (was && !userPaused) tryPlay();
+          if (was && !userPaused && !motionPref.matches) tryPlay();
         });
       }
     };
