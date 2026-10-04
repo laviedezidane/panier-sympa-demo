@@ -87,7 +87,8 @@
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) { visible = entries[0].isIntersecting; playIfAllowed(); }, { threshold: 0.2 }).observe(vd);
     } else { playIfAllowed(); }
-    if (motion.addEventListener) motion.addEventListener('change', function () { if (motion.matches) vd.pause(); else playIfAllowed(); });
+    var onMotionChange = function () { if (motion.matches) vd.pause(); else playIfAllowed(); };
+    if (motion.addEventListener) motion.addEventListener('change', onMotionChange); else if (motion.addListener) motion.addListener(onMotionChange);
     sync();
   });
   // ---------- Vidéo motion : 16:9 sur ordinateur, 9:16 sur téléphone, lecture automatique sans son ----------
@@ -120,7 +121,8 @@
         if (e[0].isIntersecting) { if (!userPaused && !motionPref.matches) tryPlay(); } else rv0.pause();
       }, { threshold: 0.4 }).observe(rv0);
     } else if (!motionPref.matches) { tryPlay(); }
-    if (motionPref.addEventListener) motionPref.addEventListener('change', function () { if (motionPref.matches) rv0.pause(); else if (!userPaused) tryPlay(); });
+    var onMotionPrefChange = function () { if (motionPref.matches) rv0.pause(); else if (!userPaused) tryPlay(); };
+    if (motionPref.addEventListener) motionPref.addEventListener('change', onMotionPrefChange); else if (motionPref.addListener) motionPref.addListener(onMotionPrefChange);
     rplay.addEventListener('click', function () { if (rv0.paused) { userPaused = false; tryPlay(); } else { userPaused = true; rv0.pause(); } lab(); });
     rsnd.addEventListener('click', function () { rv0.muted = !rv0.muted; if (!rv0.muted && rv0.paused) { userPaused = false; tryPlay(); } lab(); });
     rv0.addEventListener('play', lab); rv0.addEventListener('pause', lab);
@@ -138,7 +140,7 @@
         });
       }
     };
-    if (mq.addEventListener) mq.addEventListener('change', onMq);
+    if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
     lab();
   }
   // ---------- Carte Google : chargée après un clic seulement ----------
