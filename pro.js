@@ -61,17 +61,34 @@
   });
   var today = $('#hours li[data-d="' + day + '"]'); if (today) today.classList.add('today');
 
-  // ---------- Vidéos en boucle décoratives : pause hors écran et si le mouvement est réduit ----------
-  $$('.loopvid').forEach(function (vd) {
-    // bouton pause (WCAG 2.2.2 : un mouvement automatique de plus de 5 s doit pouvoir être arrêté)
-    var lb = document.createElement('button'); lb.type = 'button'; lb.className = 'rc lv-ctl'; lb.textContent = 'Pause'; lb.setAttribute('aria-label', 'Mettre la vidéo en pause');
-    var lpaused = false;
-    lb.addEventListener('click', function () { lpaused = !lpaused; if (lpaused) vd.pause(); else { var p = vd.play(); if (p && p.catch) p.catch(function () {}); } lb.textContent = lpaused ? 'Lecture' : 'Pause'; lb.setAttribute('aria-label', lpaused ? 'Relancer la vidéo' : 'Mettre la vidéo en pause'); });
-    if (vd.parentNode) vd.parentNode.appendChild(lb);
-    if (reduce) { vd.removeAttribute('autoplay'); vd.pause(); lpaused = true; lb.textContent = 'Lecture'; lb.setAttribute('aria-label', 'Lancer la vidéo'); return; }
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (e) { if (e[0].isIntersecting) { if (!lpaused) { var pr = vd.play(); if (pr && pr.catch) pr.catch(function () {}); } } else vd.pause(); }, { threshold: 0.2 }).observe(vd);
+  // ---------- Vidéos en boucle décoratives : pause hors écran et respect du mouvement réduit ----------
+  $('.loopvid').forEach(function (vd) {
+    var lb = document.createElement('button'); lb.type = 'button'; lb.className = 'rc lv-ctl';
+    lb.setAttribute('aria-controls', vd.id || ''); if (!vd.id) { vd.id = 'loop-video-' + Math.random().toString(36).slice(2, 8); lb.setAttribute('aria-controls', vd.id); }
+    var userPaused = false, visible = true, motion = matchMedia('(prefers-reduced-motion: reduce)');
+    function sync() {
+      var playing = !vd.paused;
+      lb.textContent = playing ? 'Pause' : 'Lecture';
+      lb.setAttribute('aria-label', playing ? 'Mettre la vidéo en pause' : 'Relancer la vidéo');
     }
+    function playIfAllowed() {
+      if (userPaused || !visible) { vd.pause(); return; }
+      if (motion.matches) return;
+      var p = vd.play(); if (p && p.catch) p.catch(function () { sync(); });
+    }
+    lb.addEventListener('click', function () {
+      if (!vd.paused) { userPaused = true; vd.pause(); }
+      else { userPaused = false; var p = vd.play(); if (p && p.catch) p.catch(function () { sync(); }); }
+      sync();
+    });
+    if (vd.parentNode) vd.parentNode.appendChild(lb);
+    vd.addEventListener('play', sync); vd.addEventListener('pause', sync);
+    if (motion.matches) { vd.removeAttribute('autoplay'); vd.pause(); }
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) { visible = entries[0].isIntersecting; playIfAllowed(); }, { threshold: 0.2 }).observe(vd);
+    } else { playIfAllowed(); }
+    if (motion.addEventListener) motion.addEventListener('change', function () { if (motion.matches) vd.pause(); else playIfAllowed(); });
+    sync();
   });
   // ---------- Vidéo motion : 16:9 sur ordinateur, 9:16 sur téléphone, lecture automatique sans son ----------
   var rv0 = $('#reel-v');
@@ -94,18 +111,32 @@
       rsnd.textContent = rv0.muted ? 'Activer le son' : 'Couper le son';
     };
     var userPaused = false;
-    var tryPlay = function () { var pr = rv0.play(); if (pr && pr.catch) pr.catch(function () { lab(); }); };
+    var tryPlay = function () {
+      var pr = rv0.play();
+      if (pr && pr.catch) pr.catch(function () { rv0.controls = true; lab(); });
+    };
     if (!reduce && 'IntersectionObserver' in window) {
       new IntersectionObserver(function (e) {
         if (e[0].isIntersecting) { if (!userPaused) tryPlay(); } else rv0.pause();
       }, { threshold: 0.4 }).observe(rv0);
-    }
+    } else if (!reduce) { tryPlay(); }
     rplay.addEventListener('click', function () { if (rv0.paused) { userPaused = false; tryPlay(); } else { userPaused = true; rv0.pause(); } lab(); });
     rsnd.addEventListener('click', function () { rv0.muted = !rv0.muted; if (!rv0.muted && rv0.paused) { userPaused = false; tryPlay(); } lab(); });
     rv0.addEventListener('play', lab); rv0.addEventListener('pause', lab);
-    // changement d'orientation ou de taille : on garde le bon format sans recharger la page
-    var mq = matchMedia('(max-width: 760px) and (orientation: portrait)');
-    var onMq = function () { if (mq.matches !== rframe.classList.contains('is-v')) { var t = rv0.currentTime, was = !rv0.paused; applySrc(mq.matches); rv0.addEventListener('loadedmetadata', function f() { rv0.removeEventListener('loadedmetadata', f); try { rv0.currentTime = Math.min(t, (rv0.duration || t) - 0.1); } catch (e) {} if (was) tryPlay(); }); } };
+    // changement d'orientation ou de taille : conserver la position et respecter une pause utilisateur pendant le rechargement
+    var mq = matchMedia('(max-width: 760px) and (orientation: portrait)'), sourceVersion = 0;
+    var onMq = function () {
+      if (mq.matches !== rframe.classList.contains('is-v')) {
+        var t = rv0.currentTime, was = !rv0.paused, version = ++sourceVersion;
+        applySrc(mq.matches);
+        rv0.addEventListener('loadedmetadata', function f() {
+          rv0.removeEventListener('loadedmetadata', f);
+          if (version !== sourceVersion) return;
+          try { rv0.currentTime = Math.max(0, Math.min(t, (rv0.duration || t) - 0.1)); } catch (e) {}
+          if (was && !userPaused) tryPlay();
+        });
+      }
+    };
     if (mq.addEventListener) mq.addEventListener('change', onMq);
     lab();
   }
