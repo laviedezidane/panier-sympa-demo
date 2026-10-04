@@ -62,7 +62,7 @@
   var today = $('#hours li[data-d="' + day + '"]'); if (today) today.classList.add('today');
 
   // ---------- Vidéos en boucle décoratives : pause hors écran et respect du mouvement réduit ----------
-  $('.loopvid').forEach(function (vd) {
+  $$('.loopvid').forEach(function (vd) {
     var lb = document.createElement('button'); lb.type = 'button'; lb.className = 'rc lv-ctl';
     lb.setAttribute('aria-controls', vd.id || ''); if (!vd.id) { vd.id = 'loop-video-' + Math.random().toString(36).slice(2, 8); lb.setAttribute('aria-controls', vd.id); }
     var userPaused = false, visible = true, motion = matchMedia('(prefers-reduced-motion: reduce)');
