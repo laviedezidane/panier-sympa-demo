@@ -38,31 +38,49 @@
     var N = hx0.length, DUST = small ? 60 : 160, MAXV = N * 3 + DUST;
 
     // ---- rendu
-    var gl = null, prog = null, buf = null, loc = {}, ctx2 = null, SP = null, lost = false;
+    var gl = null, prog = null, buf = null, loc = {}, ctx2 = null, SP = null, lost = false, altCv = null;
+    function useCanvasFallback() {
+      try { ctx2 = cv.getContext('2d'); } catch (e) { ctx2 = null; }
+      if (!ctx2) {
+        if (!altCv) {
+          altCv = document.createElement('canvas'); altCv.className = cv.className;
+          altCv.setAttribute('aria-hidden', 'true'); altCv.style.pointerEvents = 'none';
+          host.insertBefore(altCv, cv.nextSibling);
+        }
+        altCv.style.display = 'block'; altCv.width = cv.width; altCv.height = cv.height;
+        try { ctx2 = altCv.getContext('2d'); } catch (e) { ctx2 = null; }
+      }
+      if (!SP) SP = [sprite('246,241,231'), sprite('167,227,172'), sprite('231,92,72')];
+    }
     function initGL() {                                                              // appelé au départ et après une perte de contexte
-      gl = null;
+      gl = null; prog = null; buf = null; loc = {};
       try {
         gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false });
         if (gl) {
           var vs = shader(gl, gl.VERTEX_SHADER, VS), fs = shader(gl, gl.FRAGMENT_SHADER, FS);
-          prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) gl = null;
-        }
-      } catch (e) { gl = null; }
-      if (gl) {
-        gl.useProgram(prog); buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        loc.p = gl.getAttribLocation(prog, 'p'); loc.s = gl.getAttribLocation(prog, 's'); loc.c = gl.getAttribLocation(prog, 'c');
-        loc.r = gl.getUniformLocation(prog, 'r'); loc.k = gl.getUniformLocation(prog, 'k');
-        gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.clearColor(0, 0, 0, 0);
-      } else if (!ctx2) {
-        ctx2 = null; SP = [sprite('246,241,231'), sprite('167,227,172'), sprite('231,92,72')];
+          if (!vs || !fs) throw new Error('Shader WebGL indisponible');
+          prog = gl.createProgram();
+          if (!prog) throw new Error('Programme WebGL indisponible');
+          gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('Liaison WebGL impossible');
+          gl.useProgram(prog); buf = gl.createBuffer();
+          if (!buf) throw new Error('Tampon WebGL indisponible');
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          loc.p = gl.getAttribLocation(prog, 'p'); loc.s = gl.getAttribLocation(prog, 's'); loc.c = gl.getAttribLocation(prog, 'c');
+          loc.r = gl.getUniformLocation(prog, 'r'); loc.k = gl.getUniformLocation(prog, 'k');
+          gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.clearColor(0, 0, 0, 0);
+        } else { useCanvasFallback(); }
+      } catch (e) {
+        gl = null; prog = null; buf = null; loc = {};
+        useCanvasFallback();
       }
+      if (gl && altCv) altCv.style.display = 'none';
     }
     initGL();
-    if (!gl) { try { ctx2 = cv.getContext('2d'); } catch (e) { ctx2 = null; } }
-    // perte du contexte WebGL (mémoire, changement de carte graphique, onglet en veille) : on suspend puis on reconstruit
-    cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); lost = true; });
-    cv.addEventListener('webglcontextrestored', function () { initGL(); lost = false; if (typeof render === 'function') render(); });    var VB = new Float32Array(MAXV * 7), count = 0;
+    // perte du contexte WebGL : le canvas superposé prend le relais pendant la restauration
+    cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); lost = true; useCanvasFallback(); });
+    cv.addEventListener('webglcontextrestored', function () { initGL(); lost = !gl; if (!gl) useCanvasFallback(); if (typeof render === 'function') render(); });
+    var VB = new Float32Array(MAXV * 7), count = 0;
 
     // ---- halo (élément CSS, ne passe pas par le canvas)
     var halo = document.createElement('div');
@@ -91,6 +109,7 @@
       var r = host.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      if (altCv) { altCv.width = cv.width; altCv.height = cv.height; }
       portrait = W < 760 && H > W * 0.9;
       if (hero) {
         scale = portrait ? W * 0.42 : Math.min(W * 0.36, H * 0.68 / data.ar);
@@ -174,8 +193,7 @@
       var breathe = 0.5 + 0.5 * Math.sin(t * 0.9), hr = parseFloat(halo.dataset.r) || 1;
       halo.style.opacity = (Math.max(0, 1 - scrollP) * (0.7 + 0.3 * breathe)).toFixed(3);
       halo.style.transform = 'translate(' + (cx - hr).toFixed(1) + 'px,' + (cy - hr).toFixed(1) + 'px) scale(' + (0.96 + 0.08 * breathe).toFixed(3) + ')';
-      if (lost) return;
-      if (gl) {
+      if (gl && !lost) {
         gl.viewport(0, 0, cv.width, cv.height); gl.clear(gl.COLOR_BUFFER_BIT);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, VB.subarray(0, count * 7), gl.DYNAMIC_DRAW);
         gl.enableVertexAttribArray(loc.p); gl.vertexAttribPointer(loc.p, 2, gl.FLOAT, false, 28, 0);
@@ -183,7 +201,7 @@
         gl.enableVertexAttribArray(loc.c); gl.vertexAttribPointer(loc.c, 4, gl.FLOAT, false, 28, 12);
         gl.uniform2f(loc.r, W, H); gl.uniform1f(loc.k, dpr);
         gl.drawArrays(gl.POINTS, 0, count);
-      } else {
+      } else if (ctx2) {
         ctx2.setTransform(dpr, 0, 0, dpr, 0, 0); ctx2.clearRect(0, 0, W, H); ctx2.globalCompositeOperation = 'lighter';
         for (var m = 0; m < count; m += 1) {
           var o = m * 7, cc = VB[o + 3] > 0.9 && VB[o + 5] < 0.5 ? 2 : (VB[o + 3] < 0.7 ? 1 : 0), s2 = VB[o + 2] * 2.2;

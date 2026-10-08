@@ -281,6 +281,7 @@ body:has(.legal){background:var(--ivory)}
 ::selection{background:var(--mint);color:var(--night)}
 html{scrollbar-color:var(--brand) var(--paper);accent-color:var(--brand);caret-color:var(--brand)}
 a{text-underline-offset:.2em;text-decoration-thickness:1px}
+.rc:focus-visible{outline-color:#fff}
 
 /* Zones tactiles de 44 px minimum et petits textes lisibles (audit mobile) */
 .logo,.find .tel,.insta a,.foot .f-tel,.foot .f-link,.legal-row a{display:inline-flex;align-items:center;min-height:44px}
